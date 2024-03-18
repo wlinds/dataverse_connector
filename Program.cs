@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json.Linq;
 using Microsoft.PowerPlatform.Dataverse.Client;
@@ -12,50 +13,69 @@ class Program
     {
         try
         {
-            // Read & parse JSON
-            string json = File.ReadAllText("appsettings.json");
-            JObject settings = JObject.Parse(json);
-            JObject environmentVariables = (JObject)settings["EnvironmentVariables"];
+            JObject settings = JObject.Parse(File.ReadAllText("appsettings.json"));
+            var environmentVariables = settings["EnvironmentVariables"];
 
-            string url = (string)environmentVariables["Url"];
-            string userName = (string)environmentVariables["UserName"];
-            string password = (string)environmentVariables["Password"];
-            string appId = (string)environmentVariables["AppId"];
-            string redirectUri = (string)environmentVariables["RedirectUri"];
-
-            // Connection string
-            string connectionString = $@"
-                AuthType = OAuth;
-                Url = {url};
-                UserName = {userName};
-                Password = {password};
-                AppId = {appId};
-                RedirectUri = {redirectUri};
-                LoginPrompt=Auto;
-                RequireNewInstance=True";
-
-            // Connect to Dataverse
-            ServiceClient service = new ServiceClient(connectionString);
-
-            // Always use logical names for tables and columns
-            var entityMetadata = RetrieveEntityMetadata(service, "cr226_table1");
-
-            if (entityMetadata != null)
+            if (environmentVariables != null)
             {
-                Console.WriteLine("Columns in cr226_table1:");
+                var url = environmentVariables["Url"]?.ToString();
+                var userName = environmentVariables["UserName"]?.ToString();
+                var password = environmentVariables["Password"]?.ToString();
+                var appId = environmentVariables["AppId"]?.ToString();
+                var redirectUri = environmentVariables["RedirectUri"]?.ToString();
 
-                foreach (var attributeMetadata in entityMetadata.Attributes)
+                var connectionString = $"AuthType=OAuth;Url={url};UserName={userName};Password={password};AppId={appId};RedirectUri={redirectUri};LoginPrompt=Auto;RequireNewInstance=True";
+
+                // Connect to Dataverse
+                using (var service = new ServiceClient(connectionString))
                 {
-                    Console.WriteLine($"{attributeMetadata.LogicalName} - Type: {attributeMetadata.AttributeType}");
-                }
 
-                // Count rows
-                int rowCount = CountRows(service, "cr226_table1");
-                Console.WriteLine($"Number of rows in cr226_table1: {rowCount}");
-            }
-            else
-            {
-                Console.WriteLine("Table metadata not found.");
+                    var entityMetadata = RetrieveEntityMetadata(service, "cr226_aisuggestions");
+                    if (entityMetadata != null)
+                    {
+                        Console.WriteLine("Columns in cr226_aisuggestions:");
+                        foreach (var attributeMetadata in entityMetadata.Attributes)
+                        {
+                            Console.WriteLine($"{attributeMetadata.LogicalName} - Type: {attributeMetadata.AttributeType}");
+                        }
+
+                        var logicalNames = new List<string>
+                        {
+                            "cr226_aisuggestionid",
+                            "cr226_aisuggestionsid",
+                            "cr226_consultantid",
+                            "cr226_date",
+                            "cr226_enddate",
+                            "cr226_isdiscarded",
+                            "cr226_ishandled",
+                            "cr226_isrepeat",
+                            "cr226_name",
+                            "cr226_projectid",
+                            "cr226_startdate",
+                            "cr226_title",
+                        };
+
+                        var currentRowValues = GetCurrentRowValues(service, entityMetadata.LogicalName);
+
+                        // Print current row values for included attributes
+                        Console.WriteLine("Current Row Values:");
+                        foreach (var kvp in currentRowValues)
+                        {
+                            if (logicalNames.Contains(kvp.Key))
+                            {
+                                Console.WriteLine($"{kvp.Key}: {kvp.Value}");
+                            }
+                        }
+
+                        // Add a new row
+                        var newRowId = AddNewRow(service, entityMetadata.LogicalName);
+                        Console.WriteLine($"New row added with ID: {newRowId}");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Table metadata not found.");
+                    }
+                }
             }
 
             Console.WriteLine("Press <Enter> key to exit.");
@@ -85,27 +105,37 @@ class Program
         return metadataResponse.EntityMetadata;
     }
 
-    static int CountRows(IOrganizationService service, string entityName)
-{
-    // Execute FetchXML to count rows
-    string fetchXml = $@"
-        <fetch aggregate='true'>
-            <entity name='{entityName}'>
-                <attribute name='{entityName}id' aggregate='count' alias='RowCount' />
-            </entity>
-        </fetch>";
-
-    EntityCollection result = service.RetrieveMultiple(new FetchExpression(fetchXml));
-
-    if (result.Entities.Count > 0 && result.Entities[0].Contains("RowCount"))
+    static Dictionary<string, object> GetCurrentRowValues(ServiceClient service, string entityName)
     {
-        int rowCount;
-        if (result.Entities[0].TryGetAttributeValue<int>("RowCount", out rowCount))
-        {
-            return rowCount;
-        }
+        // Query to retrieve current row values
+        var query = new QueryExpression(entityName);
+        query.ColumnSet.AllColumns = true;
+        query.TopCount = 1;
+
+        var result = service.RetrieveMultiple(query);
+        var entity = result.Entities.FirstOrDefault();
+
+        return entity?.Attributes.ToDictionary(entry => entry.Key, entry => entry.Value);
     }
 
-    return 0;
-}
+    static Guid AddNewRow(ServiceClient service, string entityName)
+    {
+        // Create a new entity object
+        var newEntity = new Entity(entityName);
+
+        // Set attribute values
+        newEntity["cr226_aisuggestionid"] = "0";
+        newEntity["cr226_name"] = "New suggestion";
+        newEntity["cr226_startdate"] = DateTime.Now;
+        newEntity["cr226_enddate"] = DateTime.Now;
+
+        // Generate a new unique identifier for cr226_aisuggestionsid
+        var newRowId = Guid.NewGuid();
+        newEntity["cr226_aisuggestionsid"] = newRowId;
+
+        // Create the record
+        var createdRecordId = service.Create(newEntity);
+
+        return createdRecordId;
+    }
 }
