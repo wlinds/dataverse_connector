@@ -43,3 +43,44 @@ Datatypes:
 
 Find the values within the jungle of Microsoft/Azure/Entra/PowerApps etc. Depending on your application you can find these values in different places. Ask your administrator.
 
+- AppID: Find under Home > Your App > App Details
+- Redirect URI: ???
+
+
+---
+
+# About Dataverse Tables
+
+Tables will always come with default columns:
+
+- createdby - Type: Lookup
+- createdbyname - Type: String
+- createdbyyominame - Type: String
+- createdon - Type: DateTime
+- createdonbehalfby - Type: Lookup
+- createdonbehalfbyname - Type: String
+- createdonbehalfbyyominame - Type: String
+- importsequencenumber - Type: Integer
+- modifiedby - Type: Lookup
+- modifiedbyname - Type: String
+- modifiedbyyominame - Type: String
+- modifiedon - Type: DateTime
+- modifiedonbehalfby - Type: Lookup
+- modifiedonbehalfbyname - Type: String
+- modifiedonbehalfbyyominame - Type: String
+- overriddencreatedon - Type: DateTime
+- ownerid - Type: Owner
+- owneridname - Type: String
+- owneridtype - Type: EntityName
+- owneridyominame - Type: String
+- owningbusinessunit - Type: Lookup
+- owningbusinessunitname - Type: String
+- owningteam - Type: Lookup
+- owninguser - Type: Lookup
+- statecode - Type: State
+- statecodename - Type: Virtual
+- statuscode - Type: Status
+- statuscodename - Type: Virtual
+- timezoneruleversionnumber - Type: Integer
+- utcconversiontimezonecode - Type: Integer
+- versionnumber - Type: BigInt
