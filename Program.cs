@@ -3,6 +3,8 @@ using System.IO;
 using Newtonsoft.Json.Linq;
 using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk.Metadata;
+using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Query;
 
 class Program
 {
@@ -44,8 +46,12 @@ class Program
 
                 foreach (var attributeMetadata in entityMetadata.Attributes)
                 {
-                    Console.WriteLine(attributeMetadata.LogicalName);
+                    Console.WriteLine($"{attributeMetadata.LogicalName} - Type: {attributeMetadata.AttributeType}");
                 }
+
+                // Count rows
+                int rowCount = CountRows(service, "cr226_table1");
+                Console.WriteLine($"Number of rows in cr226_table1: {rowCount}");
             }
             else
             {
@@ -78,4 +84,28 @@ class Program
 
         return metadataResponse.EntityMetadata;
     }
+
+    static int CountRows(IOrganizationService service, string entityName)
+{
+    // Execute FetchXML to count rows
+    string fetchXml = $@"
+        <fetch aggregate='true'>
+            <entity name='{entityName}'>
+                <attribute name='{entityName}id' aggregate='count' alias='RowCount' />
+            </entity>
+        </fetch>";
+
+    EntityCollection result = service.RetrieveMultiple(new FetchExpression(fetchXml));
+
+    if (result.Entities.Count > 0 && result.Entities[0].Contains("RowCount"))
+    {
+        int rowCount;
+        if (result.Entities[0].TryGetAttributeValue<int>("RowCount", out rowCount))
+        {
+            return rowCount;
+        }
+    }
+
+    return 0;
+}
 }
