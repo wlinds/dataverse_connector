@@ -64,10 +64,11 @@ class Program
                             if (logicalNames.Contains(kvp.Key))
                             {
                                 Console.WriteLine($"{kvp.Key}: {kvp.Value}");
+                                
                             }
                         }
 
-                        // Add a new row
+                        // Add new row
                         var newRowId = AddNewRow(service, entityMetadata.LogicalName);
                         Console.WriteLine($"New row added with ID: {newRowId}");
                     }
@@ -120,7 +121,7 @@ class Program
 
     static Guid AddNewRow(ServiceClient service, string entityName)
     {
-        // Create a new entity object
+        // Create new entity object
         var newEntity = new Entity(entityName);
 
         // Set attribute values
@@ -129,11 +130,11 @@ class Program
         newEntity["cr226_startdate"] = DateTime.Now;
         newEntity["cr226_enddate"] = DateTime.Now;
 
-        // Generate a new unique identifier for cr226_aisuggestionsid
+        // Generate new unique identifier
         var newRowId = Guid.NewGuid();
         newEntity["cr226_aisuggestionsid"] = newRowId;
 
-        // Create the record
+        // Create record
         var createdRecordId = service.Create(newEntity);
 
         return createdRecordId;
